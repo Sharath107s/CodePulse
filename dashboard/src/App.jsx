@@ -4,424 +4,682 @@ import "./App.css";
 const BACKEND_URL = "http://localhost:4000";
 
 function App() {
-  const [loading, setLoading] = useState(false);
-  const [investigation, setInvestigation] = useState(null);
-  const [fix, setFix] = useState(null);
-  const [testResult, setTestResult] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [investigation, setInvestigation] = useState(null);
+    const [fix, setFix] = useState(null);
+    const [testResult, setTestResult] = useState(null);
+    const [pullRequest, setPullRequest] = useState(null);
+    const [errorMessage, setErrorMessage] = useState("");
 
-  const errorData = {
-    id: 1,
-    endpoint: "/students/999",
-    method: "GET",
-    status: 500,
-    error: "Student not found in database",
-    stack_trace: "Error: Student not found in database",
-  };
+    const errorData = {
+        id: 1,
+        endpoint: "/students/999",
+        method: "GET",
+        status: 500,
+        error: "Student not found in database",
+        stack_trace: "Error: Student not found in database",
+    };
 
-  // AI Investigation
-  const investigateError = async () => {
-    setLoading(true);
-    setInvestigation(null);
-    setErrorMessage("");
+    // ==================================================
+    // AI INVESTIGATION
+    // ==================================================
 
-    try {
-      const response = await fetch(
-        `${BACKEND_URL}/api/investigate/1`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+    const investigateError = async () => {
+        setLoading(true);
+        setInvestigation(null);
+        setErrorMessage("");
+
+        try {
+            const response = await fetch(
+                `${BACKEND_URL}/api/investigate/1`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || "Investigation failed"
+                );
+            }
+
+            setInvestigation(data.investigation);
+
+        } catch (error) {
+
+            console.error(
+                "Investigation error:",
+                error
+            );
+
+            setErrorMessage(
+                "Could not connect to CodePulse backend."
+            );
+
+        } finally {
+
+            setLoading(false);
+
         }
-      );
+    };
 
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Investigation failed"
-        );
-      }
+    // ==================================================
+    // AI CODE FIX
+    // ==================================================
 
-      setInvestigation(data.investigation);
-    } catch (error) {
-      console.error("Investigation error:", error);
+    const generateFix = async () => {
 
-      setErrorMessage(
-        "Could not connect to CodePulse backend."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        setLoading(true);
+        setFix(null);
+        setTestResult(null);
+        setPullRequest(null);
+        setErrorMessage("");
 
-  // AI Code Fix
-  const generateFix = async () => {
-    setLoading(true);
-    setFix(null);
-    setErrorMessage("");
+        try {
 
-    try {
-      const response = await fetch(
-        `${BACKEND_URL}/api/fix/1`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+            const response = await fetch(
+                `${BACKEND_URL}/api/fix/1`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.message || "Fix generation failed"
+                );
+
+            }
+
+            setFix(data.fix);
+
+            setTestResult(data.test);
+
+            setPullRequest(
+                data.pullRequest
+            );
+
+        } catch (error) {
+
+            console.error(
+                "Fix generation error:",
+                error
+            );
+
+            setErrorMessage(
+                "Could not generate the AI fix."
+            );
+
+        } finally {
+
+            setLoading(false);
+
         }
-      );
+    };
 
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Fix generation failed"
+    // ==================================================
+    // GET PULL REQUEST URL
+    // ==================================================
+
+    const getPullRequestUrl = () => {
+
+        if (!pullRequest) {
+            return null;
+        }
+
+        if (typeof pullRequest === "string") {
+            return pullRequest;
+        }
+
+        return (
+            pullRequest.html_url ||
+            pullRequest.url ||
+            pullRequest.web_url ||
+            null
         );
-      }
+    };
 
-      setFix(data.fix);
-      setTestResult(data.test);
-    } catch (error) {
-      console.error("Fix generation error:", error);
 
-      setErrorMessage(
-        "Could not generate the AI fix."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    const pullRequestUrl =
+        getPullRequestUrl();
 
-  return (
-    <div className="app">
 
-      {/* Header */}
-      <header className="header">
-        <div>
-          <h1>⚡ CodePulse</h1>
-          <p>
-            AI-Powered Error Investigation & Auto-Fix
-          </p>
-        </div>
+    return (
+        <div className="app">
 
-        <div className="status">
-          <span className="status-dot"></span>
-          Backend
-        </div>
-      </header>
+            {/* HEADER */}
 
-      {/* Main */}
-      <main className="container">
+            <header className="header">
 
-        {/* Error Card */}
-        <section className="error-card">
+                <div>
 
-          <div className="error-top">
+                    <h1>⚡ CodePulse</h1>
 
-            <div className="status-code">
-              {errorData.status}
-            </div>
+                    <p>
+                        AI-Powered Error Investigation & Auto-Fix
+                    </p>
 
-            <div className="error-title">
-              <h2>{errorData.error}</h2>
+                </div>
 
-              <p>
-                {errorData.method} {errorData.endpoint}
-              </p>
-            </div>
+                <div className="status">
 
-          </div>
+                    <span className="status-dot"></span>
 
-          <hr />
+                    Backend
 
-          <div className="error-details">
+                </div>
 
-            <div>
-              <span>ERROR</span>
-              <strong>{errorData.error}</strong>
-            </div>
+            </header>
 
-            <div>
-              <span>METHOD</span>
-              <strong>{errorData.method}</strong>
-            </div>
 
-            <div>
-              <span>STATUS</span>
-              <strong>{errorData.status}</strong>
-            </div>
+            {/* MAIN */}
 
-          </div>
+            <main className="container">
 
-          {/* Investigation Button */}
-          <button
-            className="investigate-button"
-            onClick={investigateError}
-            disabled={loading}
-          >
-            {loading
-              ? "🔄 Investigating..."
-              : "🔍 Investigate Error"}
-          </button>
 
-          {/* Fix Button */}
-          <button
-            className="investigate-button"
-            onClick={generateFix}
-            disabled={loading}
-          >
-            {loading
-              ? "🔄 Generating Fix..."
-              : "🔧 Generate AI Fix"}
-          </button>
+                {/* ERROR CARD */}
 
-        </section>
+                <section className="error-card">
 
-        {/* Error Message */}
-        {errorMessage && (
-          <div className="connection-error">
-            ⚠️ {errorMessage}
-          </div>
-        )}
+                    <div className="error-top">
 
-        {/* Loading */}
-        {loading && (
-          <div className="loading">
+                        <div className="status-code">
+                            {errorData.status}
+                        </div>
 
-            <div className="spinner"></div>
+                        <div className="error-title">
 
-            <h3>
-              🤖 CodePulse AI is working...
-            </h3>
+                            <h2>
+                                {errorData.error}
+                            </h2>
 
-            <p>
-              Please wait while CodePulse analyzes
-              the backend error.
-            </p>
+                            <p>
+                                {errorData.method}{" "}
+                                {errorData.endpoint}
+                            </p>
 
-          </div>
-        )}
+                        </div>
 
-        {/* AI Investigation */}
-        {investigation && !loading && (
-          <section className="investigation-card">
+                    </div>
 
-            <div className="ai-title">
-              🤖 AI Investigation
-            </div>
 
-            <div className="result-section">
+                    <hr />
 
-              <h2>🔍 Root Cause</h2>
 
-              <p>
-                {extractSection(
-                  investigation.aiResponse,
-                  "ROOT CAUSE"
+                    <div className="error-details">
+
+                        <div>
+
+                            <span>ERROR</span>
+
+                            <strong>
+                                {errorData.error}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>METHOD</span>
+
+                            <strong>
+                                {errorData.method}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>STATUS</span>
+
+                            <strong>
+                                {errorData.status}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    {/* INVESTIGATION BUTTON */}
+
+                    <button
+                        className="investigate-button"
+                        onClick={investigateError}
+                        disabled={loading}
+                    >
+
+                        {loading
+                            ? "🔄 Investigating..."
+                            : "🔍 Investigate Error"}
+
+                    </button>
+
+
+                    {/* FIX BUTTON */}
+
+                    <button
+                        className="investigate-button"
+                        onClick={generateFix}
+                        disabled={loading}
+                    >
+
+                        {loading
+                            ? "🔄 Generating Fix..."
+                            : "🔧 Generate AI Fix"}
+
+                    </button>
+
+                </section>
+
+
+                {/* ERROR MESSAGE */}
+
+                {errorMessage && (
+
+                    <div className="connection-error">
+
+                        ⚠️ {errorMessage}
+
+                    </div>
+
                 )}
-              </p>
 
-            </div>
 
-            <div className="result-section">
+                {/* LOADING */}
 
-              <h2>💡 Explanation</h2>
+                {loading && (
 
-              <p>
-                {extractSection(
-                  investigation.aiResponse,
-                  "EXPLANATION"
+                    <div className="loading">
+
+                        <div className="spinner"></div>
+
+                        <h3>
+                            🤖 CodePulse AI is working...
+                        </h3>
+
+                        <p>
+                            Please wait while CodePulse
+                            analyzes the backend error.
+                        </p>
+
+                    </div>
+
                 )}
-              </p>
 
-            </div>
 
-            <div className="result-section">
+                {/* AI INVESTIGATION */}
 
-              <h2>🛠️ Suggested Solution</h2>
+                {investigation && !loading && (
 
-              <p>
-                {extractSection(
-                  investigation.aiResponse,
-                  "SUGGESTED SOLUTION"
-                )}
-              </p>
+                    <section className="investigation-card">
 
-            </div>
+                        <div className="ai-title">
+                            🤖 AI Investigation
+                        </div>
 
-            <details className="full-response">
-
-              <summary>
-                View Full AI Investigation
-              </summary>
-
-              <pre>
-                {investigation.aiResponse}
-              </pre>
-
-            </details>
-
-          </section>
-        )}
-
-        {/* AI Fix */}
-        {fix && !loading && (
-          <section className="investigation-card">
-
-            <div className="ai-title">
-              🔧 AI Generated Code Fix
-            </div>
-
-            <div className="result-section">
-
-              <h2>🔍 Root Cause</h2>
-
-              <p>
-                {extractSection(
-                  fix.fixResponse,
-                  "ROOT CAUSE"
-                )}
-              </p>
-
-            </div>
-
-            <div className="result-section">
-
-              <h2>❌ Problematic Code</h2>
-
-              <pre>
-                {extractSection(
-                  fix.fixResponse,
-                  "PROBLEMATIC CODE"
-                )}
-              </pre>
-
-            </div>
-
-            <div className="result-section">
-
-              <h2>✅ Fixed Code</h2>
-
-              <pre>
-                {extractSection(
-                  fix.fixResponse,
-                  "FIXED CODE"
-                )}
-              </pre>
-
-            </div>
-
-            <div className="result-section">
-
-              <h2>💡 Explanation</h2>
-
-              <p>
-                {extractSection(
-                  fix.fixResponse,
-                  "EXPLANATION"
-                )}
-              </p>
-
-            </div>
 
                         <div className="result-section">
 
-              <h2>🧪 Automated Test</h2>
+                            <h2>
+                                🔍 Root Cause
+                            </h2>
 
-              {testResult ? (
-                <>
-                  <h3>
-                    {testResult.success
-                      ? "✅ TEST PASSED"
-                      : "❌ TEST FAILED"}
-                  </h3>
+                            <p>
+                                {extractSection(
+                                    investigation.aiResponse,
+                                    "ROOT CAUSE"
+                                )}
+                            </p>
 
-                  <p>
-                    {testResult.message}
-                  </p>
+                        </div>
 
-                  {testResult.details && (
-                    <pre>
-                      {testResult.details}
-                    </pre>
-                  )}
-                </>
-              ) : (
-                <p>Test result not available.</p>
-              )}
 
-            </div>
-            <details className="full-response">
+                        <div className="result-section">
 
-              <summary>
-                View Full AI Fix
-              </summary>
+                            <h2>
+                                💡 Explanation
+                            </h2>
 
-              <pre>
-                {fix.fixResponse}
-              </pre>
+                            <p>
+                                {extractSection(
+                                    investigation.aiResponse,
+                                    "EXPLANATION"
+                                )}
+                            </p>
 
-            </details>
+                        </div>
 
-          </section>
-        )}
 
-      </main>
+                        <div className="result-section">
 
-    </div>
-  );
+                            <h2>
+                                🛠️ Suggested Solution
+                            </h2>
+
+                            <p>
+                                {extractSection(
+                                    investigation.aiResponse,
+                                    "SUGGESTED SOLUTION"
+                                )}
+                            </p>
+
+                        </div>
+
+
+                        <details className="full-response">
+
+                            <summary>
+                                View Full AI Investigation
+                            </summary>
+
+                            <pre>
+                                {investigation.aiResponse}
+                            </pre>
+
+                        </details>
+
+                    </section>
+
+                )}
+
+
+                {/* AI FIX */}
+
+                {fix && !loading && (
+
+                    <section className="investigation-card">
+
+                        <div className="ai-title">
+                            🔧 AI Generated Code Fix
+                        </div>
+
+
+                        {/* ROOT CAUSE */}
+
+                        <div className="result-section">
+
+                            <h2>
+                                🔍 Root Cause
+                            </h2>
+
+                            <p>
+                                {extractSection(
+                                    fix.fixResponse,
+                                    "ROOT CAUSE"
+                                )}
+                            </p>
+
+                        </div>
+
+
+                        {/* PROBLEMATIC CODE */}
+
+                        <div className="result-section">
+
+                            <h2>
+                                ❌ Problematic Code
+                            </h2>
+
+                            <pre>
+                                {extractSection(
+                                    fix.fixResponse,
+                                    "PROBLEMATIC CODE"
+                                )}
+                            </pre>
+
+                        </div>
+
+
+                        {/* FIXED CODE */}
+
+                        <div className="result-section">
+
+                            <h2>
+                                ✅ Fixed Code
+                            </h2>
+
+                            <pre>
+                                {extractSection(
+                                    fix.fixResponse,
+                                    "FIXED CODE"
+                                )}
+                            </pre>
+
+                        </div>
+
+
+                        {/* EXPLANATION */}
+
+                        <div className="result-section">
+
+                            <h2>
+                                💡 Explanation
+                            </h2>
+
+                            <p>
+                                {extractSection(
+                                    fix.fixResponse,
+                                    "EXPLANATION"
+                                )}
+                            </p>
+
+                        </div>
+
+
+                        {/* AUTOMATED TEST */}
+
+                        <div className="result-section">
+
+                            <h2>
+                                🧪 Automated Test
+                            </h2>
+
+
+                            {testResult ? (
+
+                                <>
+
+                                    <h3>
+
+                                        {testResult.success
+                                            ? "✅ TEST PASSED"
+                                            : "❌ TEST FAILED"}
+
+                                    </h3>
+
+
+                                    <p>
+                                        {testResult.message}
+                                    </p>
+
+
+                                    {testResult.details && (
+
+                                        <pre>
+                                            {testResult.details}
+                                        </pre>
+
+                                    )}
+
+                                </>
+
+                            ) : (
+
+                                <p>
+                                    Test result not available.
+                                </p>
+
+                            )}
+
+                        </div>
+
+
+                        {/* GITHUB PULL REQUEST */}
+
+                        {testResult?.success && (
+
+                            <div className="result-section">
+
+                                <h2>
+                                    🔀 GitHub Pull Request
+                                </h2>
+
+
+                                {pullRequestUrl ? (
+
+                                    <>
+
+                                        <h3>
+                                            ✅ Pull Request Created
+                                        </h3>
+
+                                        <p>
+                                            The AI-generated fix
+                                            passed the automated
+                                            test and was committed
+                                            to GitHub.
+                                        </p>
+
+
+                                        <a
+                                            href={pullRequestUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="investigate-button"
+                                            style={{
+                                                display: "inline-block",
+                                                textDecoration: "none",
+                                                textAlign: "center",
+                                                marginTop: "10px"
+                                            }}
+                                        >
+                                            🔗 View Pull Request
+                                        </a>
+
+                                    </>
+
+                                ) : (
+
+                                    <p>
+                                        ⚠️ Pull Request information
+                                        was not returned by the backend.
+                                    </p>
+
+                                )}
+
+                            </div>
+
+                        )}
+
+
+                        {/* FULL RESPONSE */}
+
+                        <details className="full-response">
+
+                            <summary>
+                                View Full AI Fix
+                            </summary>
+
+                            <pre>
+                                {fix.fixResponse}
+                            </pre>
+
+                        </details>
+
+                    </section>
+
+                )}
+
+            </main>
+
+        </div>
+    );
 }
 
 
-/* Extract AI sections */
+// ==================================================
+// EXTRACT AI SECTIONS
+// ==================================================
+
 function extractSection(text, sectionName) {
 
-  if (!text) {
-    return "No information available.";
-  }
-
-  const sections = [
-    "ROOT CAUSE",
-    "PROBLEMATIC CODE",
-    "FIXED CODE",
-    "EXPLANATION",
-    "SUGGESTED SOLUTION",
-    "AFFECTED AREA",
-  ];
-
-  const start = text.indexOf(sectionName);
-
-  if (start === -1) {
-    return text;
-  }
-
-  const contentStart =
-    start + sectionName.length;
-
-  let end = text.length;
-
-  for (const section of sections) {
-
-    if (section === sectionName) {
-      continue;
+    if (!text) {
+        return "No information available.";
     }
 
-    const next = text.indexOf(
-      section,
-      contentStart
-    );
 
-    if (next !== -1 && next < end) {
-      end = next;
+    const sections = [
+        "ROOT CAUSE",
+        "PROBLEMATIC CODE",
+        "FIXED CODE",
+        "EXPLANATION",
+        "SUGGESTED SOLUTION",
+        "AFFECTED AREA",
+    ];
+
+
+    const start =
+        text.indexOf(sectionName);
+
+
+    if (start === -1) {
+        return text;
     }
-  }
 
-  return text
-    .substring(contentStart, end)
-    .replace(/\*\*/g, "")
-    .trim();
+
+    const contentStart =
+        start + sectionName.length;
+
+
+    let end = text.length;
+
+
+    for (const section of sections) {
+
+        if (section === sectionName) {
+            continue;
+        }
+
+
+        const next =
+            text.indexOf(
+                section,
+                contentStart
+            );
+
+
+        if (next !== -1 && next < end) {
+            end = next;
+        }
+
+    }
+
+
+    return text
+        .substring(
+            contentStart,
+            end
+        )
+        .replace(/[*#]/g, "")
+        .trim();
+
 }
+
 
 export default App;

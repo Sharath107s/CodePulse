@@ -26,7 +26,31 @@ SOURCE CODE:
 
 ${sourceCode}
 
-Your job is to identify the problem and create a safe code fix.
+Your job is to identify the problem and produce a corrected version of the source code.
+
+CRITICAL RULE:
+
+The FIXED CODE must completely replace the original source code.
+
+If the original code contains a statement that causes the error, REMOVE that statement completely.
+
+DO NOT keep the broken statement together with the replacement.
+
+For example, if the original code is:
+
+if (!student) {
+    throw new Error("Student not found");
+}
+
+and the correct behavior is to return HTTP 404, the fixed code MUST be:
+
+if (!student) {
+    return res.status(404).json({
+        error: "Student not found"
+    });
+}
+
+It MUST NOT contain both "throw new Error" and "return res.status".
 
 Return your answer using exactly these sections:
 
@@ -34,23 +58,27 @@ ROOT CAUSE:
 Explain the coding problem.
 
 PROBLEMATIC CODE:
-Show the exact code that should be changed.
+Show the original code that causes the problem.
 
 FIXED CODE:
-Return the COMPLETE corrected source code.
+Provide the COMPLETE corrected source file.
+Remove the broken code completely.
+Do not include markdown code fences.
 
 EXPLANATION:
-Explain why the new code fixes the problem.
+Explain why the corrected code fixes the problem.
 
 IMPORTANT:
-- The FIXED CODE section must contain the COMPLETE source file.
-- Do not return partial code.
-- Do not omit any existing code.
-- Do not invent files, functions, variables, or code that are not needed.
-- Preserve all existing functionality.
-- Only make the changes necessary to fix the reported error.
-- The complete fixed source code must be valid JavaScript.
-- Do not use markdown code fences inside FIXED CODE.
+
+- Do not invent files.
+- Do not invent unrelated code.
+- Preserve existing functionality.
+- The FIXED CODE must be executable JavaScript.
+- The FIXED CODE must be a complete replacement for the provided source code.
+- Remove unreachable code.
+- Never leave a throw statement immediately before code that is supposed to execute.
+- If you replace an existing statement, completely remove the old statement.
+- Do not include ROOT CAUSE, PROBLEMATIC CODE, or EXPLANATION inside the FIXED CODE section.
 `;
 
     const response = await fetch(
@@ -91,7 +119,9 @@ IMPORTANT:
     )?.text;
 
     if (!text) {
-        throw new Error("Gemini returned an empty fix");
+        throw new Error(
+            "Gemini returned an empty fix"
+        );
     }
 
     return {
