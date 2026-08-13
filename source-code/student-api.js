@@ -28,9 +28,11 @@ app.get("/students/:id", (req, res) => {
         (student) => student.id === studentId
     );
 
-   if (!student) {
-    throw new Error("Student not found in database");
-}
+    if (!student) {
+        return res.status(404).json({
+            error: "Student not found in database"
+        });
+    }
 
     res.json(student);
 });
